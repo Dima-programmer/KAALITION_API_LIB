@@ -1,9 +1,4 @@
-<think>
-The user wants me to rewrite the README.md file without any images/badges. They want a more standard README for a typical Python library. Let me write a clean, simple README without any image references.
-
-</think># Kaalition API Library
-
-Python библиотека для автоматизации работы с API сайта kaalition.ru.
+# Python библиотека для автоматизации работы с API сайта kaalition.ru.
 
 ## Описание
 
@@ -175,10 +170,20 @@ from kaalition_lib import (
 )
 ```
 
+## Поддержка проекта
+
+### Если библиотека оказалась полезной, вы можете:
+
+- Поставить звезду на [GitHub](github.com/Dima-programmer/KAALITION_API_LIB):
+- Сообщить об ошибке через Issues
+- Предложить улучшения через Pull Requests
+
+Ваша обратная связь помогает делать библиотеку лучше.
+
 ## Лицензия
 
 MIT License. Подробности в файле LICENSE.
 
 ## Автор
 
-Dima-Programmer - github.com/Dima-programmer
+[Dima-Programmer](github.com/Dima-programmer)
