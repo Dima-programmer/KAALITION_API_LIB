@@ -12,7 +12,7 @@ Kaalition API Library — это Python библиотека с объектно
 - requests
 - faker
 
-### pip (скоро)
+### pip (рекомендуется)
 
 ```bash
 pip install kaalition-lib

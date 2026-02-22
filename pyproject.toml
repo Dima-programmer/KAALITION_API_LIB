@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kaalition-lib"
+version = "1.0.0"
+description = "Python библиотека для автоматизации работы с API сайта kaalition.ru"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Dima-Programmer", email = "dmitrii.r.gridnev@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "requests>=2.25.0",
+    "faker>=13.0.0",
+]
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/Dima-programmer/KAALITION_API_LIB"
+Bug_Tracker = "https://github.com/Dima-programmer/KAALITION_API_LIB/issues"
+Repository = "https://github.com/Dima-programmer/KAALITION_API_LIB"
+
+[project.optional-dependencies]
+dev = ["twine", "wheel"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kaalition_lib*"]
