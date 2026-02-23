@@ -31,7 +31,7 @@ from .kaalition_lib import (
     DEFAULT_EMAIL_DOMAINS,
 )
 
-__version__ = "v1.2.0"
+__version__ = "v1.1.0"
 __author__ = "Dima-Programmer"
 
 __all__ = [
