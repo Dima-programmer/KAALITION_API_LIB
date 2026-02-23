@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kaalition-lib"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python библиотека для автоматизации работы с API сайта kaalition.ru"
 readme = "README.md"
 license = {text = "MIT"}
