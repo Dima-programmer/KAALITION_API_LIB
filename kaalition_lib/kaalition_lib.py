@@ -137,6 +137,155 @@ class User:
         return self.__str__()
 
 
+@dataclass
+class Project:
+    """
+    Датакласс для проекта.
+
+    Attributes:
+        id: ID проекта
+        title: Название проекта
+        description: Описание проекта
+        image: Путь к изображению
+        button_text: Текст кнопки
+        link: Ссылка на проект
+        order: Порядок сортировки
+        is_active: Активен ли проект
+        created_at: Дата создания
+        updated_at: Дата обновления
+    """
+    id: int
+    title: str
+    description: str
+    image: Optional[str] = None
+    button_text: str = ""
+    link: str = ""
+    order: int = 0
+    is_active: bool = True
+    created_at: str = ""
+    updated_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Project":
+        """Создаёт Project из словаря."""
+        return cls(
+            id=data.get("id", 0),
+            title=data.get("title", ""),
+            description=data.get("description", ""),
+            image=data.get("image"),
+            button_text=data.get("button_text", ""),
+            link=data.get("link", ""),
+            order=data.get("order", 0),
+            is_active=data.get("is_active", True),
+            created_at=data.get("created_at", ""),
+            updated_at=data.get("updated_at", "")
+        )
+
+    def __str__(self) -> str:
+        return f"Project(id={self.id}, title='{self.title}')"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+@dataclass
+class Member:
+    """
+    Датакласс для участника (создателя сайта).
+
+    Attributes:
+        id: ID участника
+        nickname: Никнейм участника
+        photo: Путь к фото
+        group: Группа/роль участника
+        telegram: Ссылка на Telegram
+        itd: Ссылка на ITD
+        order: Порядок сортировки
+        is_active: Активен ли участник
+        created_at: Дата создания
+        updated_at: Дата обновления
+    """
+    id: int
+    nickname: str
+    photo: Optional[str] = None
+    group: str = ""
+    telegram: str = ""
+    itd: str = ""
+    order: int = 0
+    is_active: bool = True
+    created_at: str = ""
+    updated_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Member":
+        """Создаёт Member из словаря."""
+        return cls(
+            id=data.get("id", 0),
+            nickname=data.get("nickname", ""),
+            photo=data.get("photo"),
+            group=data.get("group", ""),
+            telegram=data.get("telegram", ""),
+            itd=data.get("itd", ""),
+            order=data.get("order", 0),
+            is_active=data.get("is_active", True),
+            created_at=data.get("created_at", ""),
+            updated_at=data.get("updated_at", "")
+        )
+
+    def __str__(self) -> str:
+        return f"Member(id={self.id}, nickname='{self.nickname}', group='{self.group}')"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+@dataclass
+class News:
+    """
+    Датакласс для новости.
+
+    Attributes:
+        id: ID новости
+        title: Заголовок новости
+        subtitle: Подзаголовок
+        image: Путь к изображению
+        content: Содержание новости
+        is_published: Опубликована ли
+        views: Количество просмотров
+        created_at: Дата создания
+        updated_at: Дата обновления
+    """
+    id: int
+    title: str
+    content: str
+    subtitle: Optional[str] = None
+    image: Optional[str] = None
+    is_published: bool = True
+    views: int = 0
+    created_at: str = ""
+    updated_at: str = ""
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "News":
+        """Создаёт News из словаря."""
+        return cls(
+            id=data.get("id", 0),
+            title=data.get("title", ""),
+            content=data.get("content", ""),
+            subtitle=data.get("subtitle"),
+            image=data.get("image"),
+            is_published=data.get("is_published", True),
+            views=data.get("views", 0),
+            created_at=data.get("created_at", ""),
+            updated_at=data.get("updated_at", "")
+        )
+
+    def __str__(self) -> str:
+        return f"News(id={self.id}, title='{self.title}')"
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
 # ============================================================================
 # УТИЛИТЫ (вне классов, для независимого использования)
 # ============================================================================
@@ -288,20 +437,10 @@ def parse_wait_time(response_text: str) -> Optional[int]:
 class KaalitionClient:
     """
     Клиент для работы с API kaalition.ru.
-
-    Операции без авторизации:
-    - Регистрация новых аккаунтов
-    - Вход по email/password
-    - Создание аккаунта из токена
-    - Загрузка аккаунтов из файла
-    - Очистка неактивных аккаунтов
-
-    При регистрации/входе возвращает объект Account с авторизацией.
     """
 
     def __init__(
             self,
-            *,
             base_url: str = DEFAULT_BASE_URL,
             accounts_file: str = DEFAULT_ACCOUNTS_FILE,
             user_agent: str = DEFAULT_USER_AGENT
@@ -309,11 +448,9 @@ class KaalitionClient:
         self.base_url = base_url.rstrip("/")
         self.accounts_file = accounts_file
 
-        # Генераторы
         self.faker_ru = Faker("ru_RU")
         self.faker_en = Faker()
 
-        # Сессия
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": user_agent,
@@ -334,6 +471,11 @@ class KaalitionClient:
         self._search_users_url = f"{self.base_url}/api/messages/search/users"
         self._send_message_url = f"{self.base_url}/api/messages/send"
 
+        # Новые URL (без авторизации)
+        self._projects_url = f"{self.base_url}/api/projects"
+        self._members_url = f"{self.base_url}/api/members"
+        self._news_url = f"{self.base_url}/api/news"
+
     def _get_headers(self, token: Optional[str] = None) -> Dict[str, str]:
         headers = {
             "Origin": self.base_url,
@@ -350,6 +492,113 @@ class KaalitionClient:
             digits=True,
             upper_case=True
         )
+
+    # ... существующие методы register, login, create_from_token ...
+
+    def get_projects(self) -> List[Project]:
+        """
+        Получает список всех проектов.
+
+        Отправляет GET на /api/projects
+
+        Returns:
+            Список проектов (Project dataclass)
+
+        Example:
+            client = KaalitionClient()
+            projects = client.get_projects()
+            for project in projects:
+                print(f"{project.title}: {project.link}")
+        """
+        try:
+            response = self.session.get(
+                self._projects_url,
+                headers=self._get_headers(),
+                timeout=10
+            )
+
+            if not response.ok:
+                return []
+
+            projects_data = response.json()
+
+            if isinstance(projects_data, list):
+                return [Project.from_dict(data) for data in projects_data]
+
+            return []
+
+        except requests.exceptions.RequestException:
+            return []
+
+    def get_members(self) -> List[Member]:
+        """
+        Получает список всех участников (создателей сайта).
+
+        Отправляет GET на /api/members
+
+        Returns:
+            Список участников (Member dataclass)
+
+        Example:
+            client = KaalitionClient()
+            members = client.get_members()
+            for member in members:
+                print(f"{member.nickname} ({member.group})")
+        """
+        try:
+            response = self.session.get(
+                self._members_url,
+                headers=self._get_headers(),
+                timeout=10
+            )
+
+            if not response.ok:
+                return []
+
+            members_data = response.json()
+
+            if isinstance(members_data, list):
+                return [Member.from_dict(data) for data in members_data]
+
+            return []
+
+        except requests.exceptions.RequestException:
+            return []
+
+    def get_news(self) -> List[News]:
+        """
+        Получает список всех новостей сайта.
+
+        Отправляет GET на /api/news
+
+        Returns:
+            Список новостей (News dataclass)
+
+        Example:
+            client = KaalitionClient()
+            news = client.get_news()
+            for item in news:
+                print(f"{item.title}: {item.content[:100]}...")
+        """
+        try:
+            response = self.session.get(
+                self._news_url,
+                headers=self._get_headers(),
+                timeout=10
+            )
+
+            if not response.ok:
+                return []
+
+            news_data = response.json()
+
+            if isinstance(news_data, list):
+                return [News.from_dict(data) for data in news_data]
+
+            return []
+
+        except requests.exceptions.RequestException:
+            return []
 
     def register(
             self,

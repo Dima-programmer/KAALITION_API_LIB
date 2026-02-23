@@ -1,27 +1,11 @@
-"""
-Kaalition.ru API Library
-========================
-
-Библиотека для автоматизации работы с API сайта kaalition.ru.
-
-Основные классы:
-- KaalitionClient: Клиент для операций без авторизации
-- Account: Аккаунт с авторизацией (наследует от KaalitionClient)
-- User: Датакласс для найденных пользователей
-
-Пример использования:
-    from kaalition_lib import KaalitionClient
-
-    client = KaalitionClient()
-    account = client.register()
-    account.send_message(user, "Привет!")
-"""
-
 from .kaalition_lib import (
     # Классы
     KaalitionClient,
     Account,
     User,
+    Project,
+    Member,
+    News,
 
     # Исключения
     KaalitionError,
@@ -47,14 +31,17 @@ from .kaalition_lib import (
     DEFAULT_EMAIL_DOMAINS,
 )
 
-__version__ = "b1.0.2"
-__author__ = "Dmitry"
+__version__ = "v1.2.0"
+__author__ = "Dima-Programmer"
 
 __all__ = [
     # Классы
     "KaalitionClient",
     "Account",
     "User",
+    "Project",
+    "Member",
+    "News",
 
     # Исключения
     "KaalitionError",
