@@ -302,6 +302,7 @@ class KaalitionClient:
 
     def __init__(
             self,
+            *,
             base_url: str = DEFAULT_BASE_URL,
             accounts_file: str = DEFAULT_ACCOUNTS_FILE,
             user_agent: str = DEFAULT_USER_AGENT
