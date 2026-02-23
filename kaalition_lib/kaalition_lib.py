@@ -39,7 +39,6 @@ from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass
 from faker import Faker
 
-
 # ============================================================================
 # КОНСТАНТЫ
 # ============================================================================
@@ -227,8 +226,8 @@ def get_active_accounts(accounts: List["Account"]) -> List["Account"]:
 
 
 def clean_accounts_file(
-    filepath: str = DEFAULT_ACCOUNTS_FILE,
-    create_backup: bool = True
+        filepath: str = DEFAULT_ACCOUNTS_FILE,
+        create_backup: bool = True
 ) -> Tuple[int, str]:
     """
     Удаляет неактивные аккаунты из файла.
@@ -360,6 +359,9 @@ class KaalitionClient:
             email_domains: Optional[List[str]] = None,
             save: bool = True
     ) -> "Account":
+        """
+        Регистрирует новый аккаунт.
+        """
         if username is None:
             username = self.faker_en.user_name()
 
@@ -372,7 +374,8 @@ class KaalitionClient:
         if password is None:
             password = self._generate_password()
 
-        nickname = self.faker_en.name()
+        # РУССКИЙ НИКнейм вместо английского
+        nickname = self.faker_ru.name()
 
         payload = {
             "username": username,
@@ -543,6 +546,7 @@ class KaalitionClient:
             return resp_data.get("message", str(resp_data))
         except:
             return response.text[:200] if response.text else "Unknown error"
+
 
 # ============================================================================
 # ACCOUNT (операции с авторизацией)
