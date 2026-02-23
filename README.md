@@ -62,6 +62,9 @@ client = KaalitionClient(
 | `login(email, password)` | Вход в аккаунт |
 | `create_from_token(token)` | Создание аккаунта из токена |
 | `load_accounts()` | Загрузка сохранённых аккаунтов |
+| `get_projects()` | Получение списка проектов |
+| `get_members()` | Получение списка участников |
+| `get_news()` | Получение списка новостей |
 
 ### Account
 
@@ -95,6 +98,56 @@ class User:
     photo: str
     avatar_emoji: Optional[str]
     is_verified: bool
+```
+
+### Project
+
+```python
+@dataclass
+class Project:
+    id: int
+    title: str
+    description: str
+    image: Optional[str]
+    button_text: str
+    link: str
+    order: int
+    is_active: bool
+    created_at: str
+    updated_at: str
+```
+
+### Member
+
+```python
+@dataclass
+class Member:
+    id: int
+    nickname: str
+    photo: Optional[str]
+    group: str
+    telegram: str
+    itd: str
+    order: int
+    is_active: bool
+    created_at: str
+    updated_at: str
+```
+
+### News
+
+```python
+@dataclass
+class News:
+    id: int
+    title: str
+    content: str
+    subtitle: Optional[str]
+    image: Optional[str]
+    is_published: bool
+    views: int
+    created_at: str
+    updated_at: str
 ```
 
 ## Примеры
@@ -134,6 +187,29 @@ for user in users:
         time.sleep(1)
 ```
 
+### Получение проектов, участников и новостей
+
+```python
+from kaalition_lib import KaalitionClient
+
+client = KaalitionClient()
+
+# Проекты
+projects = client.get_projects()
+for project in projects:
+    print(f"{project.title}: {project.link}")
+
+# Участники
+members = client.get_members()
+for member in members:
+    print(f"{member.nickname} ({member.group})")
+
+# Новости
+news = client.get_news()
+for item in news:
+    print(f"{item.title}: {item.content[:100]}...")
+```
+
 ## Исключения
 
 ```python
@@ -168,9 +244,9 @@ from kaalition_lib import (
 
 ## Поддержка проекта
 
-### Если библиотека оказалась полезной, вы можете:
+Если библиотека оказалась полезной, вы можете:
 
-- Поставить звезду на [GitHub](github.com/Dima-programmer/KAALITION_API_LIB):
+- Поставить звезду на GitHub
 - Сообщить об ошибке через Issues
 - Предложить улучшения через Pull Requests
 
@@ -182,4 +258,4 @@ MIT License. Подробности в файле LICENSE.
 
 ## Автор
 
-[Dima-Programmer](github.com/Dima-programmer)
+Dima-Programmer
