@@ -162,7 +162,7 @@ def load_accounts(filepath: str = DEFAULT_ACCOUNTS_FILE, active_only: bool = Tru
 
         accounts = []
         for acc_data in data:
-            client = KaalitionClient()
+            client = KaalitionClient(accounts_file=filepath)
             account = Account(
                 token=acc_data.get("token", ""),
                 username=acc_data.get("username", ""),
