@@ -3,25 +3,24 @@ name: Publish to PyPI
 on:
   workflow_dispatch:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
-  pypi-publish:
+  deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/project/kaalition-lib/
     permissions:
+      # IMPORTANT: this permission setting is crucial for OIDC authentication
       id-token: write
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.x'
 
       - name: Install dependencies
         run: |
@@ -29,9 +28,9 @@ jobs:
           pip install build
 
       - name: Build package
+        # This creates the distribution files in the 'dist' directory
         run: python -m build
 
-      - name: Publish to PyPI
+      - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_TOKEN }}
+        # The action automatically uses the OIDC token from the permissions block
