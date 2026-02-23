@@ -47,7 +47,7 @@ from .kaalition_lib import (
     DEFAULT_EMAIL_DOMAINS,
 )
 
-__version__ = "b1.0.0"
+__version__ = "b1.0.2"
 __author__ = "Dmitry"
 
 __all__ = [
