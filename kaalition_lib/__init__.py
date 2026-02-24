@@ -3,6 +3,8 @@ from .kaalition_lib import (
     KaalitionClient,
     Account,
     User,
+    Message,
+    Reaction,
     Project,
     Member,
     News,
@@ -15,6 +17,11 @@ from .kaalition_lib import (
     ProfileUpdateError,
     UserNotFoundError,
     MessageError,
+    MessageNotFoundError,
+    MessageEditError,
+    MessageDeleteError,
+    MessageReactionError,
+    ChatHistoryError,
 
     # Утилиты
     load_accounts,
@@ -31,7 +38,7 @@ from .kaalition_lib import (
     DEFAULT_EMAIL_DOMAINS,
 )
 
-__version__ = "v1.1.0"
+__version__ = "v2.0.0"
 __author__ = "Dima-Programmer"
 
 __all__ = [
@@ -39,6 +46,8 @@ __all__ = [
     "KaalitionClient",
     "Account",
     "User",
+    "Message",
+    "Reaction",
     "Project",
     "Member",
     "News",
@@ -51,6 +60,11 @@ __all__ = [
     "ProfileUpdateError",
     "UserNotFoundError",
     "MessageError",
+    "MessageNotFoundError",
+    "MessageEditError",
+    "MessageDeleteError",
+    "MessageReactionError",
+    "ChatHistoryError",
 
     # Утилиты
     "load_accounts",
