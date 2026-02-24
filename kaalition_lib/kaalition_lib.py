@@ -450,28 +450,48 @@ def load_accounts(filepath: str = DEFAULT_ACCOUNTS_FILE, active_only: bool = Tru
 
         accounts = []
         for acc_data in data:
-            client = KaalitionClient(accounts_file=filepath)
+            # Создаём Account с упрощённой инициализацией
             account = Account(
                 token=acc_data.get("token", ""),
-                username=acc_data.get("username", ""),
                 email=acc_data.get("email", ""),
                 password=acc_data.get("password", ""),
-                active=acc_data.get("active", True),
-                nickname=acc_data.get("nickname", ""),
-                user_id=acc_data.get("user_id"),
-                avatar=acc_data.get("avatar"),
-                bio=acc_data.get("bio"),
-                avatar_emoji=acc_data.get("avatar_emoji"),
-                profile_public=acc_data.get("profile_public", True),
-                show_online=acc_data.get("show_online", True),
-                allow_messages=acc_data.get("allow_messages", True),
-                show_in_search=acc_data.get("show_in_search", True),
-                is_admin=acc_data.get("is_admin", False),
-                is_verified=acc_data.get("is_verified", False),
-                theme=acc_data.get("theme", "dark"),
-                base_url=client.base_url,
-                accounts_file=client.accounts_file
+                base_url=DEFAULT_BASE_URL,
+                accounts_file=filepath
             )
+
+            # Обновляем данные из сохранённых
+            if not account.username and acc_data.get("username"):
+                account.username = acc_data.get("username", "")
+            if not account.nickname and acc_data.get("nickname"):
+                account.nickname = acc_data.get("nickname", "")
+            if not account.id and acc_data.get("user_id"):
+                account.id = acc_data.get("user_id", 0)
+            if acc_data.get("avatar"):
+                account.avatar = acc_data.get("avatar", "")
+            if acc_data.get("bio"):
+                account.bio = acc_data.get("bio", "")
+            if acc_data.get("avatar_emoji"):
+                account.avatar_emoji = acc_data.get("avatar_emoji")
+            if acc_data.get("profile_public"):
+                account.profile_public = acc_data.get("profile_public", True)
+            if acc_data.get("show_online"):
+                account.show_online = acc_data.get("show_online", True)
+            if acc_data.get("allow_messages"):
+                account.allow_messages = acc_data.get("allow_messages", True)
+            if acc_data.get("show_in_search"):
+                account.show_in_search = acc_data.get("show_in_search", True)
+            if acc_data.get("is_admin"):
+                account.is_admin = acc_data.get("is_admin", False)
+            if acc_data.get("is_verified"):
+                account.is_verified = acc_data.get("is_verified", False)
+            if acc_data.get("theme"):
+                account.theme = acc_data.get("theme", "dark")
+            if acc_data.get("created_at"):
+                account.created_at = acc_data.get("created_at", "")
+            if acc_data.get("updated_at"):
+                account.updated_at = acc_data.get("updated_at")
+            account.active = acc_data.get("active", True)
+
             accounts.append(account)
 
         if active_only:
@@ -481,7 +501,6 @@ def load_accounts(filepath: str = DEFAULT_ACCOUNTS_FILE, active_only: bool = Tru
 
     except (json.JSONDecodeError, IOError):
         return []
-
 
 def save_accounts(accounts: List["Account"], filepath: str = DEFAULT_ACCOUNTS_FILE) -> bool:
     """
@@ -980,825 +999,839 @@ class KaalitionClient:
         """
         return clean_accounts_file(self.accounts_file, create_backup)
 
-    # ============================================================================
-    # ACCOUNT (операции с авторизацией)
-    # ============================================================================
 
-    class Account(KaalitionClient, User):
+# ============================================================================
+# ACCOUNT (операции с авторизацией)
+# ============================================================================
+
+class Account(KaalitionClient, User):
+    """
+    Аккаунт пользователя с авторизацией.
+
+    Наследуется от KaalitionClient и User для избежания дублирования полей.
+    Предоставляет полный доступ к API с авторизацией.
+
+    Создаётся через:
+    - KaalitionClient.register() - регистрация
+    - KaalitionClient.login() - вход
+    - KaalitionClient.create_from_token() - из токена
+    - load_accounts() - загрузка из файла
+
+    Attributes:
+        token: Bearer токен авторизации
+        password: Пароль (для сохранения)
+        active: Активен ли аккаунт
+        created_at: Дата создания записи
+        updated_at: Дата последнего обновления
+    """
+
+    def __init__(
+            self,
+            token: str = "",
+            email: str = "",
+            password: str = "",
+            base_url: str = DEFAULT_BASE_URL,
+            accounts_file: str = DEFAULT_ACCOUNTS_FILE
+    ):
+        # Инициализация родительских классов
+        KaalitionClient.__init__(self, base_url=base_url, accounts_file=accounts_file)
+
+        # Инициализация всех полей User вручную
+        self.id: int = 0
+        self.username: str = ""
+        self.nickname: str = ""
+        self.photo: str = ""
+        self.avatar_emoji: Optional[str] = None
+        self.is_verified: bool = False
+        self.is_admin: bool = False
+
+        # Дополнительные поля профиля
+        self.email: str = email
+        self.bio: str = ""
+        self.avatar: str = ""
+        self.profile_public: bool = True
+        self.show_online: bool = True
+        self.allow_messages: bool = True
+        self.show_in_search: bool = True
+        self.theme: str = "dark"
+
+        # Основные поля авторизации
+        self.token = token
+        self.password = password
+        self.active = True
+        self.created_at = datetime.now().isoformat()
+        self.updated_at = None
+
+        # Если передан email, сохраняем для возможности повторного входа
+        self._login_email = email
+
+        # Если есть токен, синхронизируем данные с сервером
+        if self.token:
+            self.refresh()
+            self.refresh()
+
+    def _ensure_authenticated(self) -> bool:
         """
-        Аккаунт пользователя с авторизацией.
+        Проверяет наличие токена и авторизации.
 
-        Наследуется от KaalitionClient и User для избежания дублирования полей.
-        Предоставляет полный доступ к API с авторизацией.
-
-        Создаётся через:
-        - KaalitionClient.register() - регистрация
-        - KaalitionClient.login() - вход
-        - KaalitionClient.create_from_token() - из токена
-        - load_accounts() - загрузка из файла
-
-        Attributes:
-            token: Bearer токен авторизации
-            password: Пароль (для сохранения)
-            active: Активен ли аккаунт
-            created_at: Дата создания записи
-            updated_at: Дата последнего обновления
+        Returns:
+            True если авторизован
         """
+        if not self.token:
+            return False
+        return self.active
 
-        def __init__(
-                self,
-                token: str = "",
-                email: str = "",
-                password: str = "",
-                base_url: str = DEFAULT_BASE_URL,
-                accounts_file: str = DEFAULT_ACCOUNTS_FILE
-        ):
-            # Инициализация родительских классов
-            KaalitionClient.__init__(self, base_url=base_url, accounts_file=accounts_file)
-            User.__init__(self, id=0, username="", nickname="")
+    def _get_current_user_sender(self) -> User:
+        """
+        Возвращает объект User для текущего аккаунта (для создания Message).
 
-            # Основные поля авторизации
-            self.token = token
-            self.password = password
-            self.active = True
-            self.created_at = datetime.now().isoformat()
-            self.updated_at = None
+        Returns:
+            Объект User с данными текущего аккаунта
+        """
+        return User(
+            id=self.id,
+            username=self.username,
+            nickname=self.nickname,
+            photo=self.avatar or "",
+            avatar_emoji=self.avatar_emoji,
+            is_verified=self.is_verified,
+            is_admin=self.is_admin
+        )
 
-            # Если передан email, сохраняем для возможности повторного входа
-            self._login_email = email
+    def refresh(self) -> bool:
+        """
+        Синхронизирует данные аккаунта с сервером.
 
-            # Если есть токен, синхронизируем данные с сервером
-            if self.token:
-                self.refresh()
+        Returns:
+            True при успехе
+        """
+        if not self.token:
+            return False
 
-        def _ensure_authenticated(self) -> bool:
-            """
-            Проверяет наличие токена и авторизации.
-
-            Returns:
-                True если авторизован
-            """
-            if not self.token:
-                return False
-            return self.active
-
-        def _get_current_user_sender(self) -> User:
-            """
-            Возвращает объект User для текущего аккаунта (для создания Message).
-
-            Returns:
-                Объект User с данными текущего аккаунта
-            """
-            return User(
-                id=self.id,
-                username=self.username,
-                nickname=self.nickname,
-                photo=self.avatar or "",
-                avatar_emoji=self.avatar_emoji,
-                is_verified=self.is_verified,
-                is_admin=self.is_admin
+        try:
+            response = self.session.get(
+                self._me_url,
+                headers=self._get_headers(self.token),
+                timeout=10
             )
 
-        def refresh(self) -> bool:
-            """
-            Синхронизирует данные аккаунта с сервером.
-
-            Returns:
-                True при успехе
-            """
-            if not self.token:
-                return False
-
-            try:
-                response = self.session.get(
-                    self._me_url,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    if response.status_code == 401:
-                        self.active = False
-                        self.save()
-                    return False
-
-                user_data = response.json()
-                self._update_from_user_data(user_data)
-                return True
-
-            except requests.exceptions.RequestException:
-                return False
-
-        def _update_from_user_data(self, user_data: Dict[str, Any]):
-            """
-            Обновляет данные аккаунта из ответа сервера.
-
-            Args:
-                user_data: Данные пользователя от сервера
-            """
-            # Обновляем поля из User (родительский класс)
-            self.id = user_data.get("id", self.id)
-            self.username = user_data.get("username", self.username)
-            self.nickname = user_data.get("nickname", self.nickname)
-            self.avatar = user_data.get("photo", self.avatar or "")
-            self.avatar_emoji = user_data.get("avatar_emoji", self.avatar_emoji)
-            self.is_verified = user_data.get("is_verified", self.is_verified)
-            self.is_admin = user_data.get("is_admin", self.is_admin)
-
-            # Обновляем дополнительные поля
-            self.email = user_data.get("email", getattr(self, 'email', ""))
-            self.bio = user_data.get("bio", getattr(self, 'bio', ""))
-            self.profile_public = user_data.get("profile_public", getattr(self, 'profile_public', True))
-            self.show_online = user_data.get("show_online", getattr(self, 'show_online', True))
-            self.allow_messages = user_data.get("allow_messages", getattr(self, 'allow_messages', True))
-            self.show_in_search = user_data.get("show_in_search", getattr(self, 'show_in_search', True))
-            self.theme = user_data.get("theme", getattr(self, 'theme', "dark"))
-            self.updated_at = user_data.get("updated_at", self.updated_at)
-
-        def save(self) -> bool:
-            """
-            Сохраняет аккаунт в файл.
-
-            Returns:
-                True при успехе
-            """
-            accounts = load_accounts(self.accounts_file, active_only=False)
-
-            # Проверяем, существует ли уже этот аккаунт
-            for i, acc in enumerate(accounts):
-                if acc.username == self.username or (self.email and acc.email == self.email):
-                    accounts[i] = self
-                    break
-            else:
-                accounts.append(self)
-
-            return save_accounts(accounts, self.accounts_file)
-
-        def mark_inactive(self) -> bool:
-            """
-            Помечает аккаунт как неактивный.
-
-            Returns:
-                True при успехе
-            """
-            self.active = False
-            return self.save()
-
-        def is_active(self) -> bool:
-            """
-            Проверяет активность аккаунта.
-
-            Returns:
-                True если активен
-            """
-            if not self.token:
-                self.active = False
-                return False
-
-            try:
-                response = self.session.get(
-                    self._me_url,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
+            if not response.ok:
                 if response.status_code == 401:
                     self.active = False
                     self.save()
-                    return False
-
-                self.active = True
-                return True
-
-            except requests.exceptions.RequestException:
-                return True
-
-        def to_dict(self) -> Dict[str, Any]:
-            """
-            Преобразует аккаунт в словарь для сохранения.
-
-            Returns:
-                Словарь с данными аккаунта
-            """
-            return {
-                "token": self.token,
-                "username": self.username,
-                "email": getattr(self, 'email', ""),
-                "password": self.password,
-                "active": self.active,
-                "nickname": self.nickname,
-                "user_id": self.id,
-                "avatar": getattr(self, 'avatar', ""),
-                "bio": getattr(self, 'bio', ""),
-                "avatar_emoji": self.avatar_emoji,
-                "profile_public": getattr(self, 'profile_public', True),
-                "show_online": getattr(self, 'show_online', True),
-                "allow_messages": getattr(self, 'allow_messages', True),
-                "show_in_search": getattr(self, 'show_in_search', True),
-                "is_admin": self.is_admin,
-                "is_verified": self.is_verified,
-                "theme": getattr(self, 'theme', "dark"),
-                "created_at": self.created_at,
-                "updated_at": self.updated_at
-            }
-
-        # =========================================================================
-        # МЕТОДЫ ПРОФИЛЯ
-        # =========================================================================
-
-        def update_profile(
-                self,
-                nickname: Optional[str] = None,
-                username: Optional[str] = None,
-                bio: Optional[str] = None,
-                avatar_emoji: Optional[str] = None,
-                save_after: bool = True
-        ) -> bool:
-            """
-            Обновляет профиль пользователя.
-
-            Args:
-                nickname: Новый отображаемый никнейм
-                username: Новое имя пользователя
-                bio: Новая биография
-                avatar_emoji: Новый эмодзи аватара
-                save_after: Сохранить после обновления
-
-            Returns:
-                True при успехе
-            """
-            if not self._ensure_authenticated():
                 return False
 
-            data = {
-                "nickname": nickname if nickname is not None else self.nickname,
-                "username": username if username is not None else self.username,
-                "bio": bio if bio is not None else (getattr(self, 'bio', "") or ""),
-                "avatar_emoji": avatar_emoji if avatar_emoji is not None else (self.avatar_emoji or ""),
-                "_method": "PUT"
-            }
+            user_data = response.json()
+            self._update_from_user_data(user_data)
+            return True
 
-            try:
-                response = self.session.post(
-                    self._profile_url,
-                    data=data,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
+        except requests.exceptions.RequestException:
+            return False
 
-                if not response.ok:
-                    return False
+    def _update_from_user_data(self, user_data: Dict[str, Any]):
+        """
+        Обновляет данные аккаунта из ответа сервера.
 
-                resp_data = response.json()
-                if "user" in resp_data:
-                    self._update_from_user_data(resp_data["user"])
+        Args:
+            user_data: Данные пользователя от сервера
+        """
+        # Обновляем поля из User (родительский класс)
+        self.id = user_data.get("id", self.id)
+        self.username = user_data.get("username", self.username)
+        self.nickname = user_data.get("nickname", self.nickname)
+        self.avatar = user_data.get("photo", self.avatar or "")
+        self.avatar_emoji = user_data.get("avatar_emoji", self.avatar_emoji)
+        self.is_verified = user_data.get("is_verified", self.is_verified)
+        self.is_admin = user_data.get("is_admin", self.is_admin)
+
+        # Обновляем дополнительные поля
+        self.email = user_data.get("email", getattr(self, 'email', ""))
+        self.bio = user_data.get("bio", getattr(self, 'bio', ""))
+        self.profile_public = user_data.get("profile_public", getattr(self, 'profile_public', True))
+        self.show_online = user_data.get("show_online", getattr(self, 'show_online', True))
+        self.allow_messages = user_data.get("allow_messages", getattr(self, 'allow_messages', True))
+        self.show_in_search = user_data.get("show_in_search", getattr(self, 'show_in_search', True))
+        self.theme = user_data.get("theme", getattr(self, 'theme', "dark"))
+        self.updated_at = user_data.get("updated_at", self.updated_at)
+
+    def save(self) -> bool:
+        """
+        Сохраняет аккаунт в файл.
+
+        Returns:
+            True при успехе
+        """
+        accounts = load_accounts(self.accounts_file, active_only=False)
+
+        # Проверяем, существует ли уже этот аккаунт
+        for i, acc in enumerate(accounts):
+            if acc.username == self.username or (self.email and acc.email == self.email):
+                accounts[i] = self
+                break
+        else:
+            accounts.append(self)
+
+        return save_accounts(accounts, self.accounts_file)
+
+    def mark_inactive(self) -> bool:
+        """
+        Помечает аккаунт как неактивный.
+
+        Returns:
+            True при успехе
+        """
+        self.active = False
+        return self.save()
+
+    def is_active(self) -> bool:
+        """
+        Проверяет активность аккаунта.
+
+        Returns:
+            True если активен
+        """
+        if not self.token:
+            self.active = False
+            return False
+
+        try:
+            response = self.session.get(
+                self._me_url,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if response.status_code == 401:
+                self.active = False
+                self.save()
+                return False
+
+            self.active = True
+            return True
+
+        except requests.exceptions.RequestException:
+            return True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "token": self.token,
+            "username": self.username,
+            "email": self.email,
+            "password": self.password,
+            "active": self.active,
+            "nickname": self.nickname,
+            "user_id": self.id,
+            "avatar": self.avatar,
+            "bio": self.bio,
+            "avatar_emoji": self.avatar_emoji,
+            "profile_public": self.profile_public,
+            "show_online": self.show_online,
+            "allow_messages": self.allow_messages,
+            "show_in_search": self.show_in_search,
+            "is_admin": self.is_admin,
+            "is_verified": self.is_verified,
+            "theme": self.theme,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at
+        }
+
+    # =========================================================================
+    # МЕТОДЫ ПРОФИЛЯ
+    # =========================================================================
+
+    def update_profile(
+            self,
+            nickname: Optional[str] = None,
+            username: Optional[str] = None,
+            bio: Optional[str] = None,
+            avatar_emoji: Optional[str] = None,
+            save_after: bool = True
+    ) -> bool:
+        """
+        Обновляет профиль пользователя.
+
+        Args:
+            nickname: Новый отображаемый никнейм
+            username: Новое имя пользователя
+            bio: Новая биография
+            avatar_emoji: Новый эмодзи аватара
+            save_after: Сохранить после обновления
+
+        Returns:
+            True при успехе
+        """
+        if not self._ensure_authenticated():
+            return False
+
+        data = {
+            "nickname": nickname if nickname is not None else self.nickname,
+            "username": username if username is not None else self.username,
+            "bio": bio if bio is not None else (getattr(self, 'bio', "") or ""),
+            "avatar_emoji": avatar_emoji if avatar_emoji is not None else (self.avatar_emoji or ""),
+            "_method": "PUT"
+        }
+
+        try:
+            response = self.session.post(
+                self._profile_url,
+                data=data,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                return False
+
+            resp_data = response.json()
+            if "user" in resp_data:
+                self._update_from_user_data(resp_data["user"])
+            else:
+                self._update_from_user_data(resp_data)
+
+            self.updated_at = datetime.now().isoformat()
+
+            if save_after:
+                self.save()
+
+            return True
+
+        except requests.exceptions.RequestException:
+            return False
+
+    # =========================================================================
+    # МЕТОДЫ ПОИСКА ПОЛЬЗОВАТЕЛЕЙ
+    # =========================================================================
+
+    def search_users(self, query: str) -> List[User]:
+        """
+        Ищет пользователей по запросу.
+
+        Args:
+            query: Поисковый запрос
+
+        Returns:
+            Список найденных пользователей
+        """
+        if not self._ensure_authenticated():
+            return []
+
+        try:
+            url = f"{self._search_users_url}?query={query}"
+            response = self.session.get(
+                url,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                return []
+
+            users_data = response.json()
+
+            if isinstance(users_data, list):
+                return [User.from_dict(user_data) for user_data in users_data]
+
+            return []
+
+        except requests.exceptions.RequestException:
+            return []
+
+    # =========================================================================
+    # МЕТОДЫ СООБЩЕНИЙ
+    # =========================================================================
+
+    def send_message(
+            self,
+            user: User,
+            text: str
+    ) -> Optional[Message]:
+        """
+        Отправляет сообщение пользователю.
+
+        Args:
+            user: Получатель (объект User)
+            text: Текст сообщения
+
+        Returns:
+            Объект Message при успехе, None при ошибке
+        """
+        if not self._ensure_authenticated():
+            return None
+
+        payload = {
+            "receiver_id": user.id,
+            "message": text
+        }
+
+        try:
+            response = self.session.post(
+                self._send_message_url,
+                json=payload,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                if response.status_code == 401:
+                    self.mark_inactive()
+                return None
+
+            resp_data = response.json()
+
+            # Создаём отправителя (текущий пользователь)
+            sender = self._get_current_user_sender()
+
+            # Создаём получателя
+            receiver = User(
+                id=user.id,
+                username=user.username,
+                nickname=user.nickname,
+                photo=user.photo,
+                avatar_emoji=user.avatar_emoji,
+                is_verified=user.is_verified,
+                is_admin=user.is_admin
+            )
+
+            # Создаём Message из ответа
+            message = Message.from_dict(resp_data, sender=sender, receiver=receiver)
+
+            return message
+
+        except requests.exceptions.RequestException:
+            return None
+
+    def get_chat_history(self, user: User) -> List[Message]:
+        """
+        Получает историю чата с пользователем.
+
+        Args:
+            user: Пользователь, чат с которым нужно получить
+
+        Returns:
+            Список сообщений (Message)
+
+        Raises:
+            ChatHistoryError: При ошибке получения истории
+        """
+        if not self._ensure_authenticated():
+            raise ChatHistoryError("Не авторизован")
+
+        try:
+            url = f"{self._chat_history_url}/{user.id}"
+            response = self.session.get(
+                url,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                if response.status_code == 401:
+                    self.mark_inactive()
+                    raise ChatHistoryError("Сессия истекла")
+                raise ChatHistoryError(f"Ошибка сервера: {response.status_code}")
+
+            messages_data = response.json()
+
+            if not isinstance(messages_data, list):
+                return []
+
+            # Создаём объекты User для отправителя и получателя
+            current_user = self._get_current_user_sender()
+            target_user = User(
+                id=user.id,
+                username=user.username,
+                nickname=user.nickname,
+                photo=user.photo,
+                avatar_emoji=user.avatar_emoji,
+                is_verified=user.is_verified,
+                is_admin=user.is_admin
+            )
+
+            # Создаём список Message
+            messages = []
+            for msg_data in messages_data:
+                # Определяем отправителя и получателя для каждого сообщения
+                sender_data = msg_data.get("sender", {})
+                sender_id = msg_data.get("sender_id")
+
+                # Если sender_data присутствует, используем его
+                if sender_data:
+                    sender = User.from_dict(sender_data)
                 else:
-                    self._update_from_user_data(resp_data)
+                    # Иначе создаём минимальный объект User
+                    sender = User(
+                        id=sender_id,
+                        username="",
+                        nickname=""
+                    )
 
-                self.updated_at = datetime.now().isoformat()
+                # Получатель - это либо текущий пользователь, либо целевой пользователь
+                if msg_data.get("receiver_id") == self.id:
+                    receiver = current_user
+                else:
+                    receiver = target_user
 
-                if save_after:
-                    self.save()
+                # Создаём Message
+                message = Message.from_dict(msg_data, sender=sender, receiver=receiver)
+                messages.append(message)
 
-                return True
+            # Сортируем по времени создания (старые сверху)
+            messages.sort(key=lambda m: m.created_at)
 
-            except requests.exceptions.RequestException:
-                return False
+            return messages
+
+        except requests.exceptions.RequestException as e:
+            raise ChatHistoryError(f"Ошибка сети: {e}")
+
+    def edit_message_text(
+            self,
+            message: Message,
+            new_text: str
+    ) -> Optional[Message]:
+        """
+        Редактирует текст сообщения.
+
+        Args:
+            message: Сообщение для редактирования
+            new_text: Новый текст сообщения
+
+        Returns:
+            Обновлённый Message при успехе, None при ошибке
+
+        Raises:
+            MessageEditError: При ошибке редактирования
+        """
+        if not self._ensure_authenticated():
+            raise MessageEditError("Не авторизован")
+
+        # Проверяем, что пользователь является отправителем
+        if message.sender.id != self.id:
+            raise MessageEditError("Вы можете редактировать только свои сообщения")
+
+        try:
+            url = f"{self._message_edit_url}/{message.id}/edit"
+            payload = {"message": new_text}
+
+            response = self.session.put(
+                url,
+                json=payload,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                if response.status_code == 401:
+                    self.mark_inactive()
+                    raise MessageEditError("Сессия истекла")
+                raise MessageEditError(f"Ошибка сервера: {response.status_code}")
+
+            resp_data = response.json()
+
+            # Обновляем сообщение
+            message.text = resp_data.get("message", new_text)
+            message.edited_at = resp_data.get("edited_at", datetime.now().isoformat())
+            message.updated_at = resp_data.get("updated_at", message.updated_at)
+
+            # Обновляем реакции, если они есть
+            reactions_data = resp_data.get("reactions", [])
+            if isinstance(reactions_data, list):
+                message.reactions = [Reaction.from_dict(r) for r in reactions_data]
+
+            return message
+
+        except requests.exceptions.RequestException as e:
+            raise MessageEditError(f"Ошибка сети: {e}")
+
+    def delete_message(self, message: Message) -> bool:
+        """
+        Удаляет сообщение.
+
+        Args:
+            message: Сообщение для удаления
+
+        Returns:
+            True при успехе
+
+        Raises:
+            MessageDeleteError: При ошибке удаления
+        """
+        if not self._ensure_authenticated():
+            raise MessageDeleteError("Не авторизован")
+
+        # Проверяем, что пользователь является отправителем
+        if message.sender.id != self.id:
+            raise MessageDeleteError("Вы можете удалять только свои сообщения")
+
+        try:
+            url = f"{self._message_delete_url}/{message.id}"
+
+            response = self.session.delete(
+                url,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                if response.status_code == 401:
+                    self.mark_inactive()
+                    raise MessageDeleteError("Сессия истекла")
+                raise MessageDeleteError(f"Ошибка сервера: {response.status_code}")
+
+            return True
+
+        except requests.exceptions.RequestException as e:
+            raise MessageDeleteError(f"Ошибка сети: {e}")
+
+    def toggle_message_reaction(
+            self,
+            message: Message,
+            emoji: str
+    ) -> List[Reaction]:
+        """
+        Переключает реакцию на сообщении.
+
+        Args:
+            message: Сообщение для реакции
+            emoji: Эмодзи реакции
+
+        Returns:
+            Список реакций после изменения
+
+        Raises:
+            MessageReactionError: При ошибке установки реакции
+        """
+        if not self._ensure_authenticated():
+            raise MessageReactionError("Не авторизован")
+
+        try:
+            url = f"{self._message_react_url}/{message.id}/react"
+            payload = {"emoji": emoji}
+
+            response = self.session.post(
+                url,
+                json=payload,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if not response.ok:
+                if response.status_code == 401:
+                    self.mark_inactive()
+                    raise MessageReactionError("Сессия истекла")
+                raise MessageReactionError(f"Ошибка сервера: {response.status_code}")
+
+            resp_data = response.json()
+
+            # Обновляем реакции в сообщении
+            reactions_data = resp_data.get("reactions", [])
+            if isinstance(reactions_data, list):
+                message.reactions = [Reaction.from_dict(r) for r in reactions_data]
+
+            return message.reactions
+
+        except requests.exceptions.RequestException as e:
+            raise MessageReactionError(f"Ошибка сети: {e}")
 
         # =========================================================================
-        # МЕТОДЫ ПОИСКА ПОЛЬЗОВАТЕЛЕЙ
+        # МЕТОДЫ ПОДДЕРЖКИ
         # =========================================================================
 
-        def search_users(self, query: str) -> List[User]:
-            """
-            Ищет пользователей по запросу.
-
-            Args:
-                query: Поисковый запрос
-
-            Returns:
-                Список найденных пользователей
-            """
-            if not self._ensure_authenticated():
-                return []
-
-            try:
-                url = f"{self._search_users_url}?query={query}"
-                response = self.session.get(
-                    url,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    return []
-
-                users_data = response.json()
-
-                if isinstance(users_data, list):
-                    return [User.from_dict(user_data) for user_data in users_data]
-
-                return []
-
-            except requests.exceptions.RequestException:
-                return []
-
-        # =========================================================================
-        # МЕТОДЫ СООБЩЕНИЙ
-        # =========================================================================
-
-        def send_message(
-                self,
-                user: User,
-                text: str
-        ) -> Optional[Message]:
-            """
-            Отправляет сообщение пользователю.
-
-            Args:
-                user: Получатель (объект User)
-                text: Текст сообщения
-
-            Returns:
-                Объект Message при успехе, None при ошибке
-            """
-            if not self._ensure_authenticated():
-                return None
-
-            payload = {
-                "receiver_id": user.id,
-                "message": text
-            }
-
-            try:
-                response = self.session.post(
-                    self._send_message_url,
-                    json=payload,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    if response.status_code == 401:
-                        self.mark_inactive()
-                    return None
-
-                resp_data = response.json()
-
-                # Создаём отправителя (текущий пользователь)
-                sender = self._get_current_user_sender()
-
-                # Создаём получателя
-                receiver = User(
-                    id=user.id,
-                    username=user.username,
-                    nickname=user.nickname,
-                    photo=user.photo,
-                    avatar_emoji=user.avatar_emoji,
-                    is_verified=user.is_verified,
-                    is_admin=user.is_admin
-                )
-
-                # Создаём Message из ответа
-                message = Message.from_dict(resp_data, sender=sender, receiver=receiver)
-
-                return message
-
-            except requests.exceptions.RequestException:
-                return None
-
-        def get_chat_history(self, user: User) -> List[Message]:
-            """
-            Получает историю чата с пользователем.
-
-            Args:
-                user: Пользователь, чат с которым нужно получить
-
-            Returns:
-                Список сообщений (Message)
-
-            Raises:
-                ChatHistoryError: При ошибке получения истории
-            """
-            if not self._ensure_authenticated():
-                raise ChatHistoryError("Не авторизован")
-
-            try:
-                url = f"{self._chat_history_url}/{user.id}"
-                response = self.session.get(
-                    url,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    if response.status_code == 401:
-                        self.mark_inactive()
-                        raise ChatHistoryError("Сессия истекла")
-                    raise ChatHistoryError(f"Ошибка сервера: {response.status_code}")
-
-                messages_data = response.json()
-
-                if not isinstance(messages_data, list):
-                    return []
-
-                # Создаём объекты User для отправителя и получателя
-                current_user = self._get_current_user_sender()
-                target_user = User(
-                    id=user.id,
-                    username=user.username,
-                    nickname=user.nickname,
-                    photo=user.photo,
-                    avatar_emoji=user.avatar_emoji,
-                    is_verified=user.is_verified,
-                    is_admin=user.is_admin
-                )
-
-                # Создаём список Message
-                messages = []
-                for msg_data in messages_data:
-                    # Определяем отправителя и получателя для каждого сообщения
-                    sender_data = msg_data.get("sender", {})
-                    sender_id = msg_data.get("sender_id")
-
-                    # Если sender_data присутствует, используем его
-                    if sender_data:
-                        sender = User.from_dict(sender_data)
-                    else:
-                        # Иначе создаём минимальный объект User
-                        sender = User(
-                            id=sender_id,
-                            username="",
-                            nickname=""
-                        )
-
-                    # Получатель - это либо текущий пользователь, либо целевой пользователь
-                    if msg_data.get("receiver_id") == self.id:
-                        receiver = current_user
-                    else:
-                        receiver = target_user
-
-                    # Создаём Message
-                    message = Message.from_dict(msg_data, sender=sender, receiver=receiver)
-                    messages.append(message)
-
-                # Сортируем по времени создания (старые сверху)
-                messages.sort(key=lambda m: m.created_at)
-
-                return messages
-
-            except requests.exceptions.RequestException as e:
-                raise ChatHistoryError(f"Ошибка сети: {e}")
-
-        def edit_message_text(
-                self,
-                message: Message,
-                new_text: str
-        ) -> Optional[Message]:
-            """
-            Редактирует текст сообщения.
-
-            Args:
-                message: Сообщение для редактирования
-                new_text: Новый текст сообщения
-
-            Returns:
-                Обновлённый Message при успехе, None при ошибке
-
-            Raises:
-                MessageEditError: При ошибке редактирования
-            """
-            if not self._ensure_authenticated():
-                raise MessageEditError("Не авторизован")
-
-            # Проверяем, что пользователь является отправителем
-            if message.sender.id != self.id:
-                raise MessageEditError("Вы можете редактировать только свои сообщения")
-
-            try:
-                url = f"{self._message_edit_url}/{message.id}/edit"
-                payload = {"message": new_text}
-
-                response = self.session.put(
-                    url,
-                    json=payload,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    if response.status_code == 401:
-                        self.mark_inactive()
-                        raise MessageEditError("Сессия истекла")
-                    raise MessageEditError(f"Ошибка сервера: {response.status_code}")
-
-                resp_data = response.json()
-
-                # Обновляем сообщение
-                message.text = resp_data.get("message", new_text)
-                message.edited_at = resp_data.get("edited_at", datetime.now().isoformat())
-                message.updated_at = resp_data.get("updated_at", message.updated_at)
-
-                # Обновляем реакции, если они есть
-                reactions_data = resp_data.get("reactions", [])
-                if isinstance(reactions_data, list):
-                    message.reactions = [Reaction.from_dict(r) for r in reactions_data]
-
-                return message
-
-            except requests.exceptions.RequestException as e:
-                raise MessageEditError(f"Ошибка сети: {e}")
-
-        def delete_message(self, message: Message) -> bool:
-            """
-            Удаляет сообщение.
-
-            Args:
-                message: Сообщение для удаления
-
-            Returns:
-                True при успехе
-
-            Raises:
-                MessageDeleteError: При ошибке удаления
-            """
-            if not self._ensure_authenticated():
-                raise MessageDeleteError("Не авторизован")
-
-            # Проверяем, что пользователь является отправителем
-            if message.sender.id != self.id:
-                raise MessageDeleteError("Вы можете удалять только свои сообщения")
-
-            try:
-                url = f"{self._message_delete_url}/{message.id}"
-
-                response = self.session.delete(
-                    url,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    if response.status_code == 401:
-                        self.mark_inactive()
-                        raise MessageDeleteError("Сессия истекла")
-                    raise MessageDeleteError(f"Ошибка сервера: {response.status_code}")
-
-                return True
-
-            except requests.exceptions.RequestException as e:
-                raise MessageDeleteError(f"Ошибка сети: {e}")
-
-        def toggle_message_reaction(
-                self,
-                message: Message,
-                emoji: str
-        ) -> List[Reaction]:
-            """
-            Переключает реакцию на сообщении.
-
-            Args:
-                message: Сообщение для реакции
-                emoji: Эмодзи реакции
-
-            Returns:
-                Список реакций после изменения
-
-            Raises:
-                MessageReactionError: При ошибке установки реакции
-            """
-            if not self._ensure_authenticated():
-                raise MessageReactionError("Не авторизован")
-
-            try:
-                url = f"{self._message_react_url}/{message.id}/react"
-                payload = {"emoji": emoji}
-
-                response = self.session.post(
-                    url,
-                    json=payload,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if not response.ok:
-                    if response.status_code == 401:
-                        self.mark_inactive()
-                        raise MessageReactionError("Сессия истекла")
-                    raise MessageReactionError(f"Ошибка сервера: {response.status_code}")
-
-                resp_data = response.json()
-
-                # Обновляем реакции в сообщении
-                reactions_data = resp_data.get("reactions", [])
-                if isinstance(reactions_data, list):
-                    message.reactions = [Reaction.from_dict(r) for r in reactions_data]
-
-                return message.reactions
-
-            except requests.exceptions.RequestException as e:
-                raise MessageReactionError(f"Ошибка сети: {e}")
-
-            # =========================================================================
-            # МЕТОДЫ ПОДДЕРЖКИ
-            # =========================================================================
-
-        def create_support_ticket(
-                self,
-                subject: str = "Обращение",
-                message: Optional[str] = None
-        ) -> Tuple[bool, Optional[int], str]:
-            """
-            Создаёт тикет поддержки.
-
-            Args:
-                subject: Тема обращения
-                message: Текст обращения (опционально, сгенерируется автоматически)
-
-            Returns:
-                Кортеж (успех, ID тикета, статус)
-            """
-            if not self._ensure_authenticated():
-                return False, None, "no_token"
-
-            if message is None:
-                message = self.faker_ru.text(max_nb_chars=200)
-
+    def create_support_ticket(
+            self,
+            subject: str = "Обращение",
+            message: Optional[str] = None
+    ) -> Tuple[bool, Optional[int], str]:
+        """
+        Создаёт тикет поддержки.
+
+        Args:
+            subject: Тема обращения
+            message: Текст обращения (опционально, сгенерируется автоматически)
+
+        Returns:
+            Кортеж (успех, ID тикета, статус)
+        """
+        if not self._ensure_authenticated():
+            return False, None, "no_token"
+
+        if message is None:
+            message = self.faker_ru.text(max_nb_chars=200)
+
+        payload = {
+            "subject": subject,
+            "message": message
+        }
+
+        try:
+            response = self.session.post(
+                self._support_url,
+                json=payload,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if response.ok:
+                return True, None, "success"
+            elif response.status_code == 401:
+                self.mark_inactive()
+                return False, None, "unauthorized"
+            else:
+                wait_time = parse_wait_time(response.text)
+                return False, wait_time, f"error_{response.status_code}"
+
+        except requests.exceptions.RequestException:
+            return False, None, "exception"
+
+    def send_to_support(
+            self,
+            message: str,
+            subject: str = "Обращение"
+    ) -> Tuple[bool, str]:
+        """
+        Отправляет сообщение в поддержку.
+
+        Сначала проверяет существующий чат поддержки.
+        Если тикет существует — продолжает его.
+        Если нет — создаёт новый.
+
+        Args:
+            message: Текст сообщения
+            subject: Тема для нового тикета
+
+        Returns:
+            Кортеж (успех, статус)
+        """
+        if not self._ensure_authenticated():
+            return False, "no_token"
+
+        try:
+            # Проверяем существующий чат
+            response = self.session.get(
+                self._support_chat_url,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if response.status_code == 401:
+                self.mark_inactive()
+                return False, "unauthorized"
+
+            if response.ok:
+                chat_data = response.json()
+                ticket_id = chat_data.get("ticket")
+
+                if ticket_id:
+                    # Продолжаем существующий тикет
+                    return self._send_to_existing_ticket(ticket_id, message)
+                else:
+                    # Создаём новый тикет
+                    return self._create_new_ticket(subject, message)
+
+            return False, f"error_{response.status_code}"
+
+        except requests.exceptions.RequestException:
+            return False, "exception"
+
+    def _send_to_existing_ticket(
+            self,
+            ticket_id: int,
+            message: str
+    ) -> Tuple[bool, str]:
+        """
+        Отправляет сообщение в существующий тикет.
+
+        Args:
+            ticket_id: ID тикета
+            message: Текст сообщения
+
+        Returns:
+            Кортеж (успех, статус)
+        """
+        try:
+            url = f"{self._support_url}/{ticket_id}/message"
+            payload = {"message": message}
+
+            response = self.session.post(
+                url,
+                json=payload,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
+
+            if response.ok:
+                return True, "success"
+            elif response.status_code == 401:
+                self.mark_inactive()
+                return False, "unauthorized"
+            else:
+                return False, f"error_{response.status_code}"
+
+        except requests.exceptions.RequestException:
+            return False, "exception"
+
+    def _create_new_ticket(
+            self,
+            subject: str,
+            message: str
+    ) -> Tuple[bool, str]:
+        """
+        Создаёт новый тикет поддержки.
+
+        Args:
+            subject: Тема тикета
+            message: Текст сообщения
+
+        Returns:
+            Кортеж (успех, статус)
+        """
+        try:
             payload = {
                 "subject": subject,
                 "message": message
             }
 
-            try:
-                response = self.session.post(
-                    self._support_url,
-                    json=payload,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
+            response = self.session.post(
+                self._support_url,
+                json=payload,
+                headers=self._get_headers(self.token),
+                timeout=10
+            )
 
-                if response.ok:
-                    return True, None, "success"
-                elif response.status_code == 401:
-                    self.mark_inactive()
-                    return False, None, "unauthorized"
-                else:
-                    wait_time = parse_wait_time(response.text)
-                    return False, wait_time, f"error_{response.status_code}"
-
-            except requests.exceptions.RequestException:
-                return False, None, "exception"
-
-        def send_to_support(
-                self,
-                message: str,
-                subject: str = "Обращение"
-        ) -> Tuple[bool, str]:
-            """
-            Отправляет сообщение в поддержку.
-
-            Сначала проверяет существующий чат поддержки.
-            Если тикет существует — продолжает его.
-            Если нет — создаёт новый.
-
-            Args:
-                message: Текст сообщения
-                subject: Тема для нового тикета
-
-            Returns:
-                Кортеж (успех, статус)
-            """
-            if not self._ensure_authenticated():
-                return False, "no_token"
-
-            try:
-                # Проверяем существующий чат
-                response = self.session.get(
-                    self._support_chat_url,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if response.status_code == 401:
-                    self.mark_inactive()
-                    return False, "unauthorized"
-
-                if response.ok:
-                    chat_data = response.json()
-                    ticket_id = chat_data.get("ticket")
-
-                    if ticket_id:
-                        # Продолжаем существующий тикет
-                        return self._send_to_existing_ticket(ticket_id, message)
-                    else:
-                        # Создаём новый тикет
-                        return self._create_new_ticket(subject, message)
-
+            if response.ok:
+                return True, "created"
+            elif response.status_code == 401:
+                self.mark_inactive()
+                return False, "unauthorized"
+            else:
                 return False, f"error_{response.status_code}"
 
-            except requests.exceptions.RequestException:
-                return False, "exception"
+        except requests.exceptions.RequestException:
+            return False, "exception"
 
-        def _send_to_existing_ticket(
-                self,
-                ticket_id: int,
-                message: str
-        ) -> Tuple[bool, str]:
-            """
-            Отправляет сообщение в существующий тикет.
+    def __repr__(self) -> str:
+        status = "active" if self.active else "inactive"
+        return f"Account(username='{self.username}', status={status})"
 
-            Args:
-                ticket_id: ID тикета
-                message: Текст сообщения
+    # ============================================================================
+    # МЕТОДЫ КЛАССА MESSAGE (для удобного управления сообщениями)
+    # ============================================================================
 
-            Returns:
-                Кортеж (успех, статус)
-            """
-            try:
-                url = f"{self._support_url}/{ticket_id}/message"
-                payload = {"message": message}
+    def _get_account_for_message(message: "Message") -> Optional["Account"]:
+        """
+        Вспомогательная функция для получения Account из Message.
+        Требуется для методов edit_text, delete, toggle_reaction.
 
-                response = self.session.post(
-                    url,
-                    json=payload,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
+        Args:
+            message: Сообщение
 
-                if response.ok:
-                    return True, "success"
-                elif response.status_code == 401:
-                    self.mark_inactive()
-                    return False, "unauthorized"
-                else:
-                    return False, f"error_{response.status_code}"
+        Returns:
+            Объект Account или None
+        """
+        # Пытаемся найти аккаунт в глобальном контексте
+        # Это упрощённая реализация, в реальном использовании
+        # рекомендуется вызывать методы через Account
+        return None
 
-            except requests.exceptions.RequestException:
-                return False, "exception"
-
-        def _create_new_ticket(
-                self,
-                subject: str,
-                message: str
-        ) -> Tuple[bool, str]:
-            """
-            Создаёт новый тикет поддержки.
-
-            Args:
-                subject: Тема тикета
-                message: Текст сообщения
-
-            Returns:
-                Кортеж (успех, статус)
-            """
-            try:
-                payload = {
-                    "subject": subject,
-                    "message": message
-                }
-
-                response = self.session.post(
-                    self._support_url,
-                    json=payload,
-                    headers=self._get_headers(self.token),
-                    timeout=10
-                )
-
-                if response.ok:
-                    return True, "created"
-                elif response.status_code == 401:
-                    self.mark_inactive()
-                    return False, "unauthorized"
-                else:
-                    return False, f"error_{response.status_code}"
-
-            except requests.exceptions.RequestException:
-                return False, "exception"
-
-        def __repr__(self) -> str:
-            status = "active" if self.active else "inactive"
-            return f"Account(username='{self.username}', status={status})"
-
-        # ============================================================================
-        # МЕТОДЫ КЛАССА MESSAGE (для удобного управления сообщениями)
-        # ============================================================================
-
-        def _get_account_for_message(message: "Message") -> Optional["Account"]:
-            """
-            Вспомогательная функция для получения Account из Message.
-            Требуется для методов edit_text, delete, toggle_reaction.
-
-            Args:
-                message: Сообщение
-
-            Returns:
-                Объект Account или None
-            """
-            # Пытаемся найти аккаунт в глобальном контексте
-            # Это упрощённая реализация, в реальном использовании
-            # рекомендуется вызывать методы через Account
-            return None
-
-        # ============================================================================
-        # КОНЕЦ БИБЛИОТЕКИ
-        # ============================================================================
+    # ============================================================================
+    # КОНЕЦ БИБЛИОТЕКИ
+    # ============================================================================
