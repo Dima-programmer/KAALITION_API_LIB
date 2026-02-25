@@ -148,4 +148,3 @@ account = Account(token="your_token")
 [2.0.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/releases/tag/v1.0.0
-```
