@@ -204,24 +204,10 @@ class Reaction:
         )
 
 
+# В классе Message добавляем поле account и методы:
+
 @dataclass
 class Message:
-    """
-    Датакласс для сообщения.
-
-    Attributes:
-        id: ID сообщения
-        sender: Отправитель (объект User)
-        receiver: Получатель (объект User)
-        text: Текст сообщения
-        image: Путь к изображению
-        is_read: Прочитано ли
-        read_at: Дата прочтения
-        edited_at: Дата редактирования
-        created_at: Дата создания
-        updated_at: Дата обновления
-        reactions: Список реакций
-    """
     id: int
     sender: User
     receiver: User
@@ -233,10 +219,11 @@ class Message:
     created_at: str = ""
     updated_at: str = ""
     reactions: List[Reaction] = field(default_factory=list)
+    account: Optional["Account"] = None  # Ссылка на аккаунт
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], sender: User, receiver: User) -> "Message":
-        """Создаёт Message из словаря."""
+    def from_dict(cls, data: Dict[str, Any], sender: User, receiver: User,
+                  account: Optional["Account"] = None) -> "Message":
         reactions_data = data.get("reactions", [])
         reactions = [Reaction.from_dict(r) for r in reactions_data] if isinstance(reactions_data, list) else []
 
@@ -251,7 +238,8 @@ class Message:
             edited_at=data.get("edited_at"),
             created_at=data.get("created_at", ""),
             updated_at=data.get("updated_at", ""),
-            reactions=reactions
+            reactions=reactions,
+            account=account
         )
 
     def __str__(self) -> str:
@@ -261,19 +249,79 @@ class Message:
         return self.__str__()
 
     def is_edited(self) -> bool:
-        """Проверяет, было ли сообщение отредактировано."""
         return self.edited_at is not None and self.edited_at != ""
 
     def has_reaction(self, emoji: str) -> bool:
-        """Проверяет, есть ли определённая реакция на сообщении."""
         return any(r.emoji == emoji for r in self.reactions)
 
     def get_reaction_count(self, emoji: str) -> int:
-        """Возвращает количество определённых реакций."""
         for reaction in self.reactions:
             if reaction.emoji == emoji:
                 return reaction.count
         return 0
+
+    # === Методы для работы с сообщением ===
+
+    def _ensure_account(self) -> bool:
+        """Проверяет наличие аккаунта."""
+        if not self.account:
+            raise MessageError("Для выполнения этой операции требуется Account")
+        if not self.account.token:
+            raise MessageError("Account не авторизован")
+        return True
+
+    def edit_text(self, new_text: str) -> Optional["Message"]:
+        """
+        Редактирует текст сообщения.
+
+        Args:
+            new_text: Новый текст сообщения
+
+        Returns:
+            Обновлённый Message или None при ошибке
+
+        Raises:
+            MessageError: Если нет связи с Account
+        """
+        self._ensure_account()
+
+        if self.sender.id != self.account.id:
+            raise MessageEditError("Вы можете редактировать только свои сообщения")
+
+        return self.account.edit_message_text(self, new_text)
+
+    def delete(self) -> bool:
+        """
+        Удаляет сообщение.
+
+        Returns:
+            True при успехе
+
+        Raises:
+            MessageError: Если нет связи с Account
+        """
+        self._ensure_account()
+
+        if self.sender.id != self.account.id:
+            raise MessageDeleteError("Вы можете удалять только свои сообщения")
+
+        return self.account.delete_message(self)
+
+    def toggle_reaction(self, emoji: str) -> List[Reaction]:
+        """
+        Переключает реакцию на сообщении.
+
+        Args:
+            emoji: Эмодзи реакции
+
+        Returns:
+            Список реакций после изменения
+
+        Raises:
+            MessageError: Если нет связи с Account
+        """
+        self._ensure_account()
+        return self.account.toggle_message_reaction(self, emoji)
 
 
 @dataclass
@@ -501,6 +549,7 @@ def load_accounts(filepath: str = DEFAULT_ACCOUNTS_FILE, active_only: bool = Tru
 
     except (json.JSONDecodeError, IOError):
         return []
+
 
 def save_accounts(accounts: List["Account"], filepath: str = DEFAULT_ACCOUNTS_FILE) -> bool:
     """
@@ -1340,21 +1389,9 @@ class Account(KaalitionClient, User):
     # МЕТОДЫ СООБЩЕНИЙ
     # =========================================================================
 
-    def send_message(
-            self,
-            user: User,
-            text: str
-    ) -> Optional[Message]:
-        """
-        Отправляет сообщение пользователю.
+    # В методе send_message класса Account обновляем создание Message:
 
-        Args:
-            user: Получатель (объект User)
-            text: Текст сообщения
-
-        Returns:
-            Объект Message при успехе, None при ошибке
-        """
+    def send_message(self, user: User, text: str) -> Optional[Message]:
         if not self._ensure_authenticated():
             return None
 
@@ -1378,10 +1415,7 @@ class Account(KaalitionClient, User):
 
             resp_data = response.json()
 
-            # Создаём отправителя (текущий пользователь)
             sender = self._get_current_user_sender()
-
-            # Создаём получателя
             receiver = User(
                 id=user.id,
                 username=user.username,
@@ -1392,27 +1426,17 @@ class Account(KaalitionClient, User):
                 is_admin=user.is_admin
             )
 
-            # Создаём Message из ответа
-            message = Message.from_dict(resp_data, sender=sender, receiver=receiver)
+            # Передаём self (account) в Message
+            message = Message.from_dict(resp_data, sender=sender, receiver=receiver, account=self)
 
             return message
 
         except requests.exceptions.RequestException:
             return None
 
+    # В методе get_chat_history класса Account обновляем создание Message:
+
     def get_chat_history(self, user: User) -> List[Message]:
-        """
-        Получает историю чата с пользователем.
-
-        Args:
-            user: Пользователь, чат с которым нужно получить
-
-        Returns:
-            Список сообщений (Message)
-
-        Raises:
-            ChatHistoryError: При ошибке получения истории
-        """
         if not self._ensure_authenticated():
             raise ChatHistoryError("Не авторизован")
 
@@ -1435,7 +1459,6 @@ class Account(KaalitionClient, User):
             if not isinstance(messages_data, list):
                 return []
 
-            # Создаём объекты User для отправителя и получателя
             current_user = self._get_current_user_sender()
             target_user = User(
                 id=user.id,
@@ -1447,37 +1470,26 @@ class Account(KaalitionClient, User):
                 is_admin=user.is_admin
             )
 
-            # Создаём список Message
             messages = []
             for msg_data in messages_data:
-                # Определяем отправителя и получателя для каждого сообщения
                 sender_data = msg_data.get("sender", {})
                 sender_id = msg_data.get("sender_id")
 
-                # Если sender_data присутствует, используем его
                 if sender_data:
                     sender = User.from_dict(sender_data)
                 else:
-                    # Иначе создаём минимальный объект User
-                    sender = User(
-                        id=sender_id,
-                        username="",
-                        nickname=""
-                    )
+                    sender = User(id=sender_id, username="", nickname="")
 
-                # Получатель - это либо текущий пользователь, либо целевой пользователь
                 if msg_data.get("receiver_id") == self.id:
                     receiver = current_user
                 else:
                     receiver = target_user
 
-                # Создаём Message
-                message = Message.from_dict(msg_data, sender=sender, receiver=receiver)
+                # Передаём self (account) в Message
+                message = Message.from_dict(msg_data, sender=sender, receiver=receiver, account=self)
                 messages.append(message)
 
-            # Сортируем по времени создания (старые сверху)
             messages.sort(key=lambda m: m.created_at)
-
             return messages
 
         except requests.exceptions.RequestException as e:
