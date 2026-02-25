@@ -302,8 +302,8 @@ class Message:
         """
         self._ensure_account()
 
-        if self.sender.id != self.account.id:
-            raise MessageDeleteError("Вы можете удалять только свои сообщения")
+        # if self.sender.id != self.account.id:
+        #     raise MessageDeleteError("Вы можете удалять только свои сообщения")
 
         return self.account.delete_message(self)
 
@@ -1571,8 +1571,8 @@ class Account(KaalitionClient, User):
             raise MessageDeleteError("Не авторизован")
 
         # Проверяем, что пользователь является отправителем
-        if message.sender.id != self.id:
-            raise MessageDeleteError("Вы можете удалять только свои сообщения")
+        # if message.sender.id != self.id:
+        #     raise MessageDeleteError("Вы можете удалять только свои сообщения")
 
         try:
             url = f"{self._message_delete_url}/{message.id}"
