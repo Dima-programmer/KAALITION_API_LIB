@@ -6,6 +6,10 @@ from .kaalition_lib import (
     Account,
     User,
     Message,
+    Chat,
+    Channel,
+    ChannelMessage,
+    ChannelMember,
     Reaction,
     Project,
     Member,
@@ -22,6 +26,11 @@ from .kaalition_lib import (
     MessageDeleteError,
     MessageReactionError,
     ChatHistoryError,
+    ChannelError,
+    ChannelCreateError,
+    ChannelUpdateError,
+    ChannelDeleteError,
+    ChannelMemberError,
 
     # Утилиты
     parse_wait_time,
@@ -30,9 +39,10 @@ from .kaalition_lib import (
     DEFAULT_BASE_URL,
     DEFAULT_USER_AGENT,
     DEFAULT_EMAIL_DOMAINS,
+    DEFAULT_SITE_KEY,
 )
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 __author__ = "Dima-Programmer"
 
 __all__ = [
@@ -41,6 +51,10 @@ __all__ = [
     "Account",
     "User",
     "Message",
+    "Chat",
+    "Channel",
+    "ChannelMessage",
+    "ChannelMember",
     "Reaction",
     "Project",
     "Member",
@@ -57,6 +71,11 @@ __all__ = [
     "MessageDeleteError",
     "MessageReactionError",
     "ChatHistoryError",
+    "ChannelError",
+    "ChannelCreateError",
+    "ChannelUpdateError",
+    "ChannelDeleteError",
+    "ChannelMemberError",
 
     # Утилиты
     "parse_wait_time",
@@ -65,4 +84,5 @@ __all__ = [
     "DEFAULT_BASE_URL",
     "DEFAULT_USER_AGENT",
     "DEFAULT_EMAIL_DOMAINS",
+    "DEFAULT_SITE_KEY",
 ]
