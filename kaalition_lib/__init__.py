@@ -1,3 +1,5 @@
+# __init__.py
+
 from .kaalition_lib import (
     # Классы
     KaalitionClient,
@@ -11,34 +13,26 @@ from .kaalition_lib import (
 
     # Исключения
     KaalitionError,
-    RegistrationError,
     LoginError,
     TokenError,
     ProfileUpdateError,
     UserNotFoundError,
     MessageError,
-    MessageNotFoundError,
     MessageEditError,
     MessageDeleteError,
     MessageReactionError,
     ChatHistoryError,
 
     # Утилиты
-    load_accounts,
-    save_accounts,
-    get_active_accounts,
-    clean_accounts_file,
     parse_wait_time,
 
     # Константы
     DEFAULT_BASE_URL,
-    DEFAULT_ACCOUNTS_FILE,
     DEFAULT_USER_AGENT,
-    DEFAULT_DELAY,
     DEFAULT_EMAIL_DOMAINS,
 )
 
-__version__ = "v2.0.0"
+__version__ = "3.0.0"
 __author__ = "Dima-Programmer"
 
 __all__ = [
@@ -54,29 +48,21 @@ __all__ = [
 
     # Исключения
     "KaalitionError",
-    "RegistrationError",
     "LoginError",
     "TokenError",
     "ProfileUpdateError",
     "UserNotFoundError",
     "MessageError",
-    "MessageNotFoundError",
     "MessageEditError",
     "MessageDeleteError",
     "MessageReactionError",
     "ChatHistoryError",
 
     # Утилиты
-    "load_accounts",
-    "save_accounts",
-    "get_active_accounts",
-    "clean_accounts_file",
     "parse_wait_time",
 
     # Константы
     "DEFAULT_BASE_URL",
-    "DEFAULT_ACCOUNTS_FILE",
     "DEFAULT_USER_AGENT",
-    "DEFAULT_DELAY",
     "DEFAULT_EMAIL_DOMAINS",
 ]

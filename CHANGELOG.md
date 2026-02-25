@@ -1,210 +1,151 @@
 # Changelog
 
-## 2.0.0
+## [3.0.0] - 2026
 
-### Изменено
+### ⚠️ Breaking Changes
 
-#### Новая система наследования
+#### Удалено
 
-`Account` теперь наследуется сразу от `KaalitionClient` и `User`, что исключает дублирование полей и упрощает работу с данными пользователя.
+- Функция `load_accounts()` — загрузка аккаунтов из файла
+- Функция `save_accounts()` — сохранение аккаунтов в файл
+- Функция `get_active_accounts()` — фильтрация активных аккаунтов
+- Функция `clean_accounts_file()` — очистка неактивных аккаунтов
+- Константа `DEFAULT_ACCOUNTS_FILE` — путь к файлу аккаунтов
+- Поддержка коллекции аккаунтов
+- Метод `register()` — регистрация недоступна
+- Метод `create_support_ticket()` — поддержка недоступна
+- Метод `send_to_support()` — поддержка недоступна
+- Методы `login()` и `create_from_token()` из `KaalitionClient`
 
-**До:**
-```python
-# Поля User и Account были раздельными
-print(account.username)
-print(account.nickname)
-```
+#### Изменено
 
-**После:**
-```python
-# Account включает все поля User
-print(account.id)           # ID пользователя
-print(account.username)     # Имя пользователя
-print(account.nickname)     # Отображаемое имя
-print(account.is_verified)  # Верификация
-print(account.is_admin)     # Админ
-```
+- `Account` теперь инициализируется напрямую без `KaalitionClient`
+- Новая структура инициализации: `Account(email, password)` или `Account(token)`
 
-#### Упрощённая инициализация
+### Причина изменений
 
-Теперь для создания `Account` достаточно передать только `token` или `email` + `password`. Все остальные поля заполняются автоматически при синхронизации с сервером.
-
-**До:**
-```python
-account = client.register(
-    username="test_user",
-    email="test@mail.ru",
-    password="password123",
-    nickname="Test User"
-)
-```
-
-**После:**
-```python
-# Из токена
-account = Account(token="your_token")
-
-# Из email и пароля (автоматически выполнит вход)
-account = Account(email="test@mail.ru", password="password")
-
-# Все остальные поля заполняются автоматически
-```
+Новая политика сайта kaalition.ru ограничила доступ к API регистрации и поддержки.
 
 ### Добавлено
 
 #### Новый класс Message
 
-Полноценный класс для работы с сообщениями, включающий информацию об отправителе и получателе как объектах `User`.
+Полноценный класс для работы с сообщениями:
 
 ```python
 @dataclass
 class Message:
     id: int                      # ID сообщения
-    sender: User                 # Отправитель (объект User)
-    receiver: User               # Получатель (объект User)
-    text: str                    # Текст сообщения
-    image: Optional[str]         # Путь к изображению
-    is_read: bool                # Прочитано ли
+    sender: User                 # Отправитель
+    receiver: User               # Получатель
+    text: str                    # Текст
+    image: Optional[str]         # Изображение
+    is_read: bool                # Прочитано
     read_at: Optional[str]       # Дата прочтения
     edited_at: Optional[str]     # Дата редактирования
     created_at: str              # Дата создания
     updated_at: str              # Дата обновления
-    reactions: List[Reaction]    # Список реакций
+    reactions: List[Reaction]    # Реакции
+    account: Optional[Account]   # Связанный аккаунт
 ```
 
-**Методы:**
+#### Методы Message
 
-- `is_edited()` — проверяет, было ли сообщение отредактировано
-- `has_reaction(emoji)` — проверяет наличие определённой реакции
-- `get_reaction_count(emoji)` — возвращает количество определённых реакций
-
-#### Новый класс Reaction
-
-```python
-@dataclass
-class Reaction:
-    emoji: str              # Эмодзи реакции
-    count: int              # Количество
-    user_ids: List[int]     # Список ID пользователей
-```
-
-#### Новые методы в Account
-
-| Метод | Описание | Возвращает |
-|-------|----------|------------|
-| `get_chat_history(user)` | Получение истории чата с пользователем | `List[Message]` |
-| `edit_message_text(message, new_text)` | Редактирование текста сообщения | `Optional[Message]` |
-| `delete_message(message)` | Удаление сообщения | `bool` |
-| `toggle_message_reaction(message, emoji)` | Переключение реакции на сообщении | `List[Reaction]` |
-
-#### Изменение метода send_message
-
-Метод `send_message()` теперь возвращает объект `Message` вместо кортежа.
-
-**До:**
-```python
-success, status = account.send_message(user, "Привет!")
-if success:
-    print("Отправлено")
-```
-
-**После:**
-```python
-message = account.send_message(user, "Привет!")
-if message:
-    print(f"Отправлено: {message.id}")
-    print(f"Текст: {message.text}")
-    print(f"Отправитель: {message.sender.nickname}")
-```
+| Метод | Описание |
+|-------|----------|
+| `edit_text(new_text)` | Редактирование сообщения |
+| `delete()` | Удаление сообщения |
+| `toggle_reaction(emoji)` | Переключение реакции |
+| `is_edited()` | Проверка на редактирование |
+| `has_reaction(emoji)` | Проверка наличия реакции |
+| `get_reaction_count(emoji)` | Количество реакций |
 
 #### Новые исключения
 
-Добавлены специализированные исключения для работы с сообщениями:
-
 ```python
-from kaalition_lib import (
-    MessageError,           # Базовое исключение для сообщений
-    MessageNotFoundError,   # Сообщение не найдено
-    MessageEditError,       # Ошибка редактирования сообщения
-    MessageDeleteError,     # Ошибка удаления сообщения
-    MessageReactionError,   # Ошибка установки реакции
-    ChatHistoryError,       # Ошибка получения истории чата
-)
+MessageError           # Базовое для сообщений
+MessageEditError       # Ошибка редактирования
+MessageDeleteError     # Ошибка удаления
+MessageReactionError   # Ошибка реакции
+ChatHistoryError       # Ошибка истории чата
 ```
 
-### Улучшения
+### Улучшено
 
-- Оптимизирована структура классов
-- Улучшена обработка ошибок с использованием специализированных исключений
-- Добавлены методы для проверки состояния сообщений
-- Улучшена синхронизация данных с сервером при инициализации
+- Оптимизирована структура кода
+- Исправлены проблемы с зависанием при ошибках 401
+- Упрощённая инициализация `Account`
+- Привязка `Account` к `Message` для методов
+
+### Миграция с v2.x
+
+```python
+# v2.x — старый код
+from kaalition_lib import KaalitionClient
+
+client = KaalitionClient()
+account = client.login("email@mail.ru", "password")
+
+# v3.0.0 — новый код
+from kaalition_lib import Account
+
+account = Account(email="email@mail.ru", password="password")
+# или
+account = Account(token="your_token")
+```
 
 ---
 
-## [1.1.0] - 2025
-
-### Добавлено
-
-- Метод `get_projects()` — получение списка проектов
-- Метод `get_members()` — получение списка участников (создателей сайта)
-- Метод `get_news()` — получение списка новостей
+## [2.0.0] - 2026
 
 ### Изменено
 
-- Улучшена генерация паролей с использованием библиотеки Faker
-- Оптимизирована обработка HTTP-запросов
-
-### Исправлено
-
-- Мелкие ошибки и баги
-
----
-
-## [1.0.0] - 2025
+- `Account` теперь наследуется от `KaalitionClient` и `User`
+- Упрощённая инициализация с автоматическим заполнением данных
+- `send_message()` возвращает объект `Message`
 
 ### Добавлено
 
-- Базовый клиент `KaalitionClient` для операций без авторизации
-- Регистрация новых аккаунтов через `register()`
-- Вход в существующие аккаунты через `login()`
-- Создание аккаунта из токена через `create_from_token()`
-- Поиск пользователей через `search_users()`
-- Отправка личных сообщений через `send_message()`
-- Создание тикетов поддержки через `create_support_ticket()`
-- Отправка сообщений в поддержку через `send_to_support()`
-- Обновление профиля через `update_profile()`
-- Сохранение и загрузка аккаунтов из JSON файла
-- Утилиты для управления коллекцией аккаунтов
-
-### Классы данных
-
-- `User` — данные о пользователе
-- `Project` — данные о проекте
-- `Member` — данные об участнике
-- `News` — данные о новости
-
-### Исключения
-
-- `KaalitionError` — базовое исключение
-- `RegistrationError` — ошибка регистрации
-- `LoginError` — ошибка входа
-- `TokenError` — ошибка токена
-- `ProfileUpdateError` — ошибка обновления профиля
-- `UserNotFoundError` — пользователь не найден
-- `MessageError` — ошибка отправки сообщения
+- Класс `Message` с информацией об отправителе и получателе
+- Класс `Reaction` для работы с реакциями
+- Метод `get_chat_history()` — история чата
+- Метод `edit_message_text()` — редактирование сообщений
+- Метод `delete_message()` — удаление сообщений
+- Метод `toggle_message_reaction()` — управление реакциями
+- Новые исключения для сообщений
 
 ---
 
-## [Unreleased]
+## [1.1.0] - 2026
 
-### Планируется
+### Добавлено
 
-- [ ] Работа с групповыми чатами
-- [ ] Поддержка WebSocket для real-time уведомлений
-- [ ] Асинхронная версия библиотеки
+- Метод `get_projects()` — список проектов
+- Метод `get_members()` — список участников
+- Метод `get_news()` — список новостей
+
+### Изменено
+
+- Улучшена генерация паролей
 
 ---
 
+## [1.0.0] - 2026
+
+### Добавлено
+
+- Базовый клиент `KaalitionClient`
+- Регистрация и вход в аккаунт
+- Поиск пользователей
+- Отправка сообщений
+- Поддержка тикетов
+- Сохранение/загрузка аккаунтов
+- Классы данных: `User`
+
+---
+
+[3.0.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Dima-programmer/KAALITION_API_LIB/releases/tag/v1.0.0
+```
