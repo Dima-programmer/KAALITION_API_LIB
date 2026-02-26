@@ -4,7 +4,7 @@ Python библиотека для работы с API сайта kaalition.ru.
 
 ## Документация
 
-Полная документация доступна в [docs/README.md](docs/README.md).
+Полная документация доступна в [docs/README.md](https://github.com/Dima-programmer/KAALITION_API_LIB/tree/master/docs/README.md).
 
 ---
 
@@ -102,13 +102,13 @@ account.leave_channel(channel.id)
 
 ## Документация
 
-Полная документация: [docs/README.md](docs/README.md)
+Полная документация: [docs/README.md](https://github.com/Dima-programmer/KAALITION_API_LIB/tree/master/docs/README.md)
 
 ---
 
 ## Версия
 
-**3.1.0** — [FULL CHANGELOG](CHANGELOG.md)
+**3.1.0** — [FULL CHANGELOG](https://github.com/Dima-programmer/KAALITION_API_LIB/tree/master/CHANGELOG.md)
 
 ### Changelog
 
@@ -121,10 +121,10 @@ account.leave_channel(channel.id)
 
 ## Лицензия
 
-[MIT](LICENSE)
+[LICENSE](https://github.com/Dima-programmer/KAALITION_API_LIB/tree/master/LICENSE)
 
 ---
 
 ## Автор
 
-Dima-Programmer
+[Dima-Programmer](https://github.com/Dima-programmer)
