@@ -145,37 +145,37 @@ account = Account(
 
 #### Атрибуты
 
-| Атрибут            | Тип          | Описание                           |
-|--------------------|--------------|------------------------------------|
-| `id`               | `int`        | ID пользователя                    |
-| `username`         | `str`        | Имя пользователя (уникальное)      |
-| `nickname`         | `str`        | Отображаемое имя                   |
-| `email`            | `str`        | Email адрес                        |
-| `photo` / `avatar` | `str`        | Ссылка на фото профиля             |
-| `avatar_emoji`     | `str \ None` | Эмодзи-аватар                      |
-| `bio`              | `str`        | О себе                             |
-| `is_verified`      | `bool`       | Верифицирован ли пользователь      |
-| `is_admin`         | `bool`       | Является ли администратором        |
-| `theme`            | `str`        | Тема оформления (`dark`/`light`)   |
-| `profile_public`   | `bool`       | Профиль публичен?                  |
-| `show_online`      | `bool`       | Показывать онлайн-статус?          |
-| `allow_messages`   | `bool`       | Разрешены входящие сообщения?      |
-| `show_in_search`   | `bool`       | Показывать в поиске пользователей? |
-| `token`            | `str`        | JWT токен авторизации              |
-| `active`           | `bool`       | Активна ли сессия                  |
+| Атрибут            | Тип          | Описание                            |
+|--------------------|--------------|-------------------------------------|
+| `id`               | `int`        | ID пользователя                     |
+| `username`         | `str`        | Имя пользователя (уникальное)       |
+| `nickname`         | `str`        | Отображаемое имя                    |
+| `email`            | `str`        | Email адрес                         |
+| `photo` / `avatar` | `str`        | Ссылка на фото профиля              |
+| `avatar_emoji`     | `str \ None` | Эмодзи-аватар                       |
+| `bio`              | `str`        | О себе                              |
+| `is_verified`      | `bool`       | Верифицирован ли пользователь       |
+| `is_admin`         | `bool`       | Является ли администратором         |
+| `theme`            | `str`        | Тема оформления (`dark` и другие..) |
+| `profile_public`   | `bool`       | Профиль публичен?                   |
+| `show_online`      | `bool`       | Показывать онлайн-статус?           |
+| `allow_messages`   | `bool`       | Разрешены входящие сообщения?       |
+| `show_in_search`   | `bool`       | Показывать в поиске пользователей?  |
+| `token`            | `str`        | JWT токен авторизации               |
+| `active`           | `bool`       | Активна ли сессия                   |
 
 #### Методы
 
 ##### Авторизация и профиль
 
-| Метод                                                                         | Возвращает | Описание                        |
-|-------------------------------------------------------------------------------|------------|---------------------------------|
-| `refresh()`                                                                   | `bool`     | Синхронизация данных с сервером |
-| `is_active()`                                                                 | `bool`     | Проверка активности сессии      |
-| `update_profile(nickname, username, bio, avatar_emoji)`                       | `bool`     | Обновление профиля              |
-| `update_password(current, new, confirmation)`                                 | `bool`     | Смена пароля                    |
-| `update_theme(theme)`                                                         | `bool`     | Смена темы (`dark`/`light`)     |
-| `update_privacy(profile_public, show_online, allow_messages, show_in_search)` | `bool`     | Настройки приватности           |
+| Метод                                                                         | Возвращает | Описание                                 |
+|-------------------------------------------------------------------------------|------------|------------------------------------------|
+| `refresh()`                                                                   | `bool`     | Синхронизация данных с сервером          |
+| `is_active()`                                                                 | `bool`     | Проверка активности сессии               |
+| `update_profile(nickname, username, bio, avatar_emoji)`                       | `bool`     | Обновление профиля                       |
+| `update_password(current, new, confirmation)`                                 | `bool`     | Смена пароля                             |
+| `update_theme(theme)`                                                         | `bool`     | Смена темы (например `dark`) |
+| `update_privacy(profile_public, show_online, allow_messages, show_in_search)` | `bool`     | Настройки приватности                    |
 
 ##### Сессии
 
@@ -711,7 +711,7 @@ account.update_profile(
 )
 
 # Смена темы
-account.update_theme("light")  # или "dark"
+account.update_theme("amoled")
 
 # Настройки приватности
 account.update_privacy(
