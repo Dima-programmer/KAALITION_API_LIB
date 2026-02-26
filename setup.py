@@ -7,7 +7,7 @@ setup(
     name="kaalition-lib",
     version="3.1.0",
     author="Dima-Programmer",
-    author_email="dima-programmer@example.com",
+    author_email="dmitrii.r.gridnev@gmail.com",
     description="Python библиотека для автоматизации работы с API сайта kaalition.ru",
     long_description=long_description,
     long_description_content_type="text/markdown",
