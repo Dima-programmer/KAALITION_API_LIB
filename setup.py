@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="kaalition-lib",
-    version="3.1.0",
+    version="3.1.1",
     author="Dima-Programmer",
     author_email="dmitrii.r.gridnev@gmail.com",
     description="Python библиотека для автоматизации работы с API сайта kaalition.ru",

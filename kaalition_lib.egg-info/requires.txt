@@ -1,0 +1,6 @@
+requests>=2.25.0
+faker>=13.0.0
+
+[dev]
+twine
+wheel
