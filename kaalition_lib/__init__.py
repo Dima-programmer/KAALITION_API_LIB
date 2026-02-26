@@ -42,7 +42,7 @@ from .kaalition_lib import (
     DEFAULT_SITE_KEY,
 )
 
-__version__ = "3.1.0"
+__version__ = "3.1.1"
 __author__ = "Dima-Programmer"
 
 __all__ = [
