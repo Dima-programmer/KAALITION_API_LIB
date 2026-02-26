@@ -976,7 +976,7 @@ class Account(KaalitionClient):
             return False
 
     def update_theme(self, theme: str) -> bool:
-        """Изменение темы (dark/light)."""
+        """Изменение темы (dark/amoled/forest/navy)."""
         if not self.token:
             return False
 
